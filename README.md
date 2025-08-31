@@ -1,3 +1,4 @@
+
 ---
 
 # SQL Challenge – Media.Monks (BigQuery + Looker Studio)
@@ -310,6 +311,7 @@ Con estos resultados podés responder:
 ---
 
 **Listo.** Fase 1 (EDA) documentada y criterios cerrados. Cuando quieras, corrés el bloque de **Fase 2** para crear `VENTAS_LIMPIA` y seguimos con el ranking en USD.
+
 
 
 
