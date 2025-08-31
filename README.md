@@ -2,7 +2,7 @@
 
 **Repo:** SQL-Challenge-Monks
 **Dataset origen:** `mm-tse-latam-interviews.challange_marcelo`
-**Tablas:** `ventas`, `productos`, `tdc`
+**Tablas:** `VENTAS`, `PRODUCTOS`, `TDC`
 **Período esperado:** 2022-01-01 a 2022-03-31 (AR, BR, MX)
 
 ---
@@ -307,5 +307,6 @@ SELECT 'limpia', COUNT(*) FROM `mm-tse-latam-interviews.challange_marcelo.VENTAS
 * Completar **1.6** con resultados e interpretación.
 * Crear vista `v_ventas_usd` (join a `tdc`) y luego el **ranking mensual por país** para el Ejercicio 2.
 * Construir dashboard en Looker Studio con las vistas resultantes.
+
 
 
