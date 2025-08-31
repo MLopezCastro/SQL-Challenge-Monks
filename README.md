@@ -192,7 +192,7 @@ WHERE v.pais_norm IS NOT NULL AND t.tdc IS NULL;
 
 ## Fase 2 — Limpieza (crear `VENTAS_LIMPIA`)
 
-> **A ejecutar cuando cierres el EDA.** Implementa todas las reglas (excepto TDC).
+> **Se ejecuta cuando luego del EDA.** Implementa todas las reglas (excepto TDC).
 
 ```sql
 CREATE OR REPLACE TABLE `mm-tse-latam-interviews.challange_marcelo.VENTAS_LIMPIA` AS
@@ -314,6 +314,7 @@ Con estos resultados podés responder:
 ---
 
 **Listo.** Fase 1 (EDA) documentada y criterios cerrados. Cuando quieras, corrés el bloque de **Fase 2** para crear `VENTAS_LIMPIA` y seguimos con el ranking en USD.
+
 
 
 
