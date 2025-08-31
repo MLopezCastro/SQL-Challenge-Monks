@@ -1,28 +1,32 @@
-# SQL Challenge – Media.Monks (BigQuery + Looker Studio)
-
-**Repo:** SQL-Challenge-Monks
-
-**Dataset origen:** `mm-tse-latam-interviews.challange_marcelo`
-
-**Tablas:** `VENTAS`, `PRODUCTOS`, `TDC`
-
-**Período esperado:** 2022-01-01 a 2022-03-31 (AR, BR, MX)
+perfecto — acá tenés **un README completo, desde cero**, listo para **copiar y pegar**. está organizado en **Fase 1 (EDA/Profiling)** y **Fase 2 (Limpieza)** como querías. incluye **todos los números que ya mediste** y **queries reproducibles**.
 
 ---
 
-## 1) Data Profiling – Evidencia (VENTAS)
+# SQL Challenge – Media.Monks (BigQuery + Looker Studio)
 
-> Objetivo: inspeccionar calidad de datos, registrar problemas y definir criterios de limpieza.
-> Todas las consultas están en BigQuery SQL con el dataset `challange_marcelo`.
+**Repo:** `SQL-Challenge-Monks`
+**Dataset origen:** `mm-tse-latam-interviews.challange_marcelo`
+**Tablas:** `ventas`, `productos`, `tdc`
+**Período esperado:** **2022-01-01 → 2022-03-31** (Argentina, Brasil, México)
 
-### 1.1 Conteo y fechas
+---
 
-**Resultado**
+## Enfoque
 
-* Filas totales: **6,000**
-* Rango observado: **2022-01-01 → 2022-03-31**
+* **Fase 1 – EDA / Data Profiling (esta sección):** observar la calidad de datos, cuantificar problemas y dejar criterios de limpieza **justificados**.
+* **Fase 2 – Limpieza (al final):** materializar `VENTAS_LIMPIA` aplicando las reglas acordadas.
+* **Fase 3 – Insights (luego):** calcular ingresos en USD y ranking mensual por país (Looker Studio).
 
-**Query**
+> Nota: EDA = *Exploratory Data Analysis*. Acá no “forzamos” datos; **documentamos** lo que hay y definimos **reglas**. Recién después creamos la tabla limpia.
+
+---
+
+## Fase 1 — EDA / Data Profiling (VENTAS)
+
+### 1) Tamaño y fechas
+
+* **Filas totales:** **6,000**
+* **Rango observado:** **2022-01-01 → 2022-03-31**
 
 ```sql
 SELECT COUNT(*) AS filas
@@ -34,9 +38,9 @@ FROM `mm-tse-latam-interviews.challange_marcelo.ventas`;
 
 ---
 
-### 1.2 País (valores crudos y propuesta de normalización)
+### 2) País (valores crudos)
 
-**Distribución cruda**
+Se observan variantes de escritura:
 
 | pais | filas |
 | ---: | ----: |
@@ -47,47 +51,29 @@ FROM `mm-tse-latam-interviews.challange_marcelo.ventas`;
 |   Mx |    82 |
 |   Ar |    75 |
 
-> Hallazgo: existen variantes (`Arg/Ar`, `Bra/Br`, `Mex/Mx`).
-> Decisión: **normalizar** a `AR`, `BR`, `MX`.
-
-**Query (distribución y vista previa de normalización)**
-
 ```sql
 SELECT pais, COUNT(*) AS filas
 FROM `mm-tse-latam-interviews.challange_marcelo.ventas`
 GROUP BY pais
 ORDER BY filas DESC;
-
-SELECT
-  pais AS pais_raw,
-  CASE
-    WHEN LOWER(pais) IN ('ar','arg','argentina') THEN 'AR'
-    WHEN LOWER(pais) IN ('br','bra','brasil','brazil') THEN 'BR'
-    WHEN LOWER(pais) IN ('mx','mex','méxico','mexico') THEN 'MX'
-    ELSE NULL
-  END AS pais_norm,
-  COUNT(*) AS filas
-FROM `mm-tse-latam-interviews.challange_marcelo.ventas`
-GROUP BY pais_raw, pais_norm
-ORDER BY filas DESC;
 ```
+
+**Decisión:** normalizar a `AR/BR/MX` (mapeo por prefijo o lista) y **descartar** valores no mapeables.
 
 ---
 
-### 1.3 `id_venta` (nulos/vacíos y duplicados)
+### 3) `id_venta`
 
-**Resultados**
-
-* `id_venta` vacío/nulo: **244**
-* Duplicados sobre `id_venta` no vacío: **0**
-
-**Query**
+* **Vacío / nulo:** **244**
+* **Duplicados (en no-vacíos):** **0**
 
 ```sql
+-- nulos/vacíos
 SELECT COUNT(*) AS id_venta_vacio
 FROM `mm-tse-latam-interviews.challange_marcelo.ventas`
 WHERE id_venta IS NULL OR TRIM(id_venta) = '';
 
+-- duplicados (no devolvió filas)
 SELECT id_venta, COUNT(*) AS repeticiones
 FROM `mm-tse-latam-interviews.challange_marcelo.ventas`
 WHERE id_venta IS NOT NULL AND TRIM(id_venta) <> ''
@@ -97,21 +83,14 @@ ORDER BY repeticiones DESC
 LIMIT 50;
 ```
 
-**Criterio**
-
-* `id_venta` es clave obligatoria → **excluir** filas con valor vacío/nulo.
-* Si hubiera duplicados: conservar **fecha más reciente** y, en empate, **mayor cantidad** (no aplica aquí).
+**Decisión:** `id_venta` es clave ⇒ **excluir** vacíos/nulos. Si aparecieran duplicados en futuras cargas, conservar **fecha más reciente** y, en empate, **mayor cantidad**.
 
 ---
 
-### 1.4 Cantidades y precios no válidos
+### 4) Cantidades y precios
 
-**Resultados**
-
-* `cantidad` ≤ 0 o nula: **489**
-* `precio_moneda_local` ≤ 0 o nula: **0**
-
-**Query**
+* **`cantidad ≤ 0` (o nula):** **489** (**8.15%**)
+* **`precio_moneda_local ≤ 0` (o nula):** **0**
 
 ```sql
 SELECT COUNT(*) AS cant_no_positiva
@@ -123,19 +102,13 @@ FROM `mm-tse-latam-interviews.challange_marcelo.ventas`
 WHERE precio_moneda_local IS NULL OR precio_moneda_local <= 0;
 ```
 
-**Criterio**
-
-* Tratar `cantidad` ≤ 0 como errores de carga (no modelamos devoluciones) → **excluir**.
+**Decisión:** no invertimos signos (p.ej. `-6 → 6`); el enunciado no modela devoluciones. Tratamos `cantidad ≤ 0` como **errores de carga** ⇒ **excluir** en `VENTAS_LIMPIA`.
 
 ---
 
-### 1.5 Fechas fuera de rango
+### 5) Fechas fuera de rango
 
-**Resultado**
-
-* Filas fuera de 2022-01-01 a 2022-03-31: **0**
-
-**Query**
+* **Filas fuera de 2022-01-01 ↔ 2022-03-31:** **0**
 
 ```sql
 SELECT COUNT(*) AS fechas_fuera_de_rango
@@ -146,12 +119,13 @@ WHERE creation_date < DATE '2022-01-01'
 
 ---
 
-### 1.6 Integridad (pendiente de ejecutar y documentar)
+### 6) Integridad entre tablas
 
-**A) `ventas` vs `productos`**
+**6.A) `ventas` ↔ `productos`**
+
+* **Resultado:** `productos_sin_match = 0` (todo `id_producto` existe en `productos`)
 
 ```sql
--- Ajustar tipos para comparar correctamente
 SELECT COUNT(*) AS productos_sin_match
 FROM `mm-tse-latam-interviews.challange_marcelo.ventas` v
 LEFT JOIN `mm-tse-latam-interviews.challange_marcelo.productos` p
@@ -159,117 +133,67 @@ LEFT JOIN `mm-tse-latam-interviews.challange_marcelo.productos` p
 WHERE p.id_producto IS NULL;
 ```
 
-**B) Cobertura de `tdc` por país (normalizado) y fecha**
+**6.B) Cobertura de TDC por país/fecha**
+En `tdc` los países vienen con **variantes** (`Arg/Arg1`, `Bra/Bra2`, `Mex/Mex3`). Hay que **normalizar también TDC** para poder unir por país/fecha.
 
 ```sql
+-- Conteo de ventas que quedarían sin TDC (tras normalizar ambos lados)
 WITH v_norm AS (
   SELECT
     creation_date,
     CASE
-      WHEN LOWER(pais) IN ('ar','arg','argentina') THEN 'AR'
-      WHEN LOWER(pais) IN ('br','bra','brasil','brazil') THEN 'BR'
-      WHEN LOWER(pais) IN ('mx','mex','méxico','mexico') THEN 'MX'
+      WHEN REGEXP_CONTAINS(LOWER(pais), r'^arg') THEN 'AR'
+      WHEN REGEXP_CONTAINS(LOWER(pais), r'^bra') THEN 'BR'
+      WHEN REGEXP_CONTAINS(LOWER(pais), r'^mex') THEN 'MX'
       ELSE NULL
     END AS pais_norm
   FROM `mm-tse-latam-interviews.challange_marcelo.ventas`
+),
+t_norm AS (
+  SELECT
+    DATE(fecha_tdc) AS fecha,
+    CASE
+      WHEN REGEXP_CONTAINS(LOWER(pais), r'^arg') THEN 'AR'
+      WHEN REGEXP_CONTAINS(LOWER(pais), r'^bra') THEN 'BR'
+      WHEN REGEXP_CONTAINS(LOWER(pais), r'^mex') THEN 'MX'
+      ELSE NULL
+    END AS pais_norm,
+    AVG(tdc) AS tdc          -- consolido variantes por día/país
+  FROM `mm-tse-latam-interviews.challange_marcelo.tdc`
+  GROUP BY fecha, pais_norm
 )
 SELECT COUNT(*) AS sin_tdc
 FROM v_norm v
-LEFT JOIN `mm-tse-latam-interviews.challange_marcelo.tdc` t
-  ON t.pais = v.pais_norm AND DATE(t.fecha_tdc) = v.creation_date
+LEFT JOIN t_norm t
+  ON t.pais_norm = v.pais_norm
+ AND t.fecha     = v.creation_date
 WHERE v.pais_norm IS NOT NULL AND t.tdc IS NULL;
 ```
 
-> Completar resultados aquí cuando se ejecuten y anotar la decisión (excluir o imputar).
+> **Resultado a completar:** `sin_tdc = ____`
+> **Criterio:** para simplificar, **no exijo TDC en `VENTAS_LIMPIA`**. El TDC se **normaliza y exige** recién al calcular USD (Ejercicio 2); si no hay TDC ese día/país, la venta **no entra** en el cálculo USD.
 
 ---
 
-## 2) Decisiones de limpieza (resumen)
+## Reglas de limpieza acordadas (se aplicarán en Fase 2)
 
-1. **Normalizar `pais`** a `AR/BR/MX`; descartar valores no mapeables.
-2. **`id_venta` obligatorio** → excluir **244** filas vacías/nulas.
-3. **`cantidad` > 0** → excluir **489** filas con cantidad ≤ 0 o nula.
-4. **`precio_moneda_local` > 0** → no se detectaron casos inválidos.
-5. **Fechas** dentro del rango → sin exclusiones por este punto.
-6. **Integridad** (depende de 1.6):
-
-   * Excluir ventas cuyo `id_producto` no exista en `productos`.
-   * Excluir ventas sin `tdc` para su país/fecha (o imputar si se define).
-  
----
-
-### Notas aclaratorias (lo que hago y por qué)
-
-* **Cantidades negativas/0:** **no invierto el signo** (p.ej. `-6 → 6`), porque el challenge no modela devoluciones y hacerlo inventaría ventas.
-  Con **489/6000 = 8.15%** de filas con `cantidad ≤ 0`, lo trato como **error de carga** y **las excluyo** de `VENTAS_LIMPIA`.
-
-* **Sin tabla extra:** no materializo tabla de rechazados; las filas inválidas **quedan solo en la tabla origen** y se documentan en esta sección.
-
-* **Integridad (1.6):** al construir `VENTAS_LIMPIA` voy a **excluir** ventas cuyo `id_producto` no exista en `productos` y ventas **sin** tipo de cambio (`tdc`) para su país/fecha. (Completaré los números cuando ejecute 1.6.)
-
----
-
-### Reglas exactas que aplicará `VENTAS_LIMPIA`
-
-1. **`pais`** → normalizo `Arg/Ar → AR`, `Bra/Br → BR`, `Mex/Mx → MX`; descarto valores no mapeables.
-2. **`id_venta`** → obligatorio (excluyo `NULL`/vacío).
+1. **País** → normalizar a `AR/BR/MX`; descartar valores no mapeables.
+2. **`id_venta`** → obligatorio (excluir `NULL`/vacío).
 3. **`creation_date`** → dentro de `2022-01-01`–`2022-03-31`.
-4. **`id_producto`** → obligatorio y debe existir en `productos`.
-5. **`cantidad`** → **> 0** (excluyo `≤ 0`).
+4. **`id_producto`** → obligatorio y **debe existir** en `productos`.
+5. **`cantidad`** → **> 0** (excluir `≤ 0`).
 6. **`precio_moneda_local`** → **> 0**.
-7. **Deduplicación** (defensivo) por `id_venta`: conservo la fila de **fecha más reciente** y, si empata, **mayor cantidad**.
-8. **TDC** (para cálculos a USD en el Ej. 2): exigiré `tdc` para `pais/fecha`; si no hay match, se **excluye** del cálculo.
+7. **Deduplicación** por `id_venta` (defensivo): conservar **fecha más reciente** y, en empate, **mayor cantidad**.
+8. **TDC** → **no** se exige en `VENTAS_LIMPIA`; se normaliza y exige al convertir a **USD**.
 
 ---
 
-Cuando termines 1.6, me pasás los conteos y te preparo el bloque final de creación de `VENTAS_LIMPIA` con esos filtros ya integrados.
+## Fase 2 — Limpieza (crear `VENTAS_LIMPIA`)
 
-
----
-
-## 3) (Opcional) Tabla de auditoría de anomalías
+> **A ejecutar cuando cierres el EDA.** Implementa todas las reglas (excepto TDC).
 
 ```sql
-CREATE OR REPLACE TABLE `mm-tse-latam-interviews.challange_marcelo.VENTAS_ANOMALIAS` AS
-WITH base AS (
-  SELECT
-    v.*,
-    CASE
-      WHEN LOWER(pais) IN ('ar','arg','argentina') THEN 'AR'
-      WHEN LOWER(pais) IN ('br','bra','brasil','brazil') THEN 'BR'
-      WHEN LOWER(pais) IN ('mx','mex','méxico','mexico') THEN 'MX'
-      ELSE NULL
-    END AS pais_norm,
-    ARRAY_REMOVE([
-      IF(id_venta IS NULL OR TRIM(id_venta) = '', 'id_venta_vacio', NULL),
-      IF(creation_date IS NULL, 'fecha_nula', NULL),
-      IF(creation_date < DATE '2022-01-01' OR creation_date > DATE '2022-03-31', 'fuera_de_rango', NULL),
-      IF(pais IS NULL OR pais_norm IS NULL, 'pais_invalido', NULL),
-      IF(cantidad IS NULL OR cantidad <= 0, 'cantidad_no_positiva', NULL),
-      IF(precio_moneda_local IS NULL OR precio_moneda_local <= 0, 'precio_no_positivo', NULL)
-    ], NULL) AS motivos
-  FROM `mm-tse-latam-interviews.challange_marcelo.ventas` v
-)
-SELECT *
-FROM base
-WHERE ARRAY_LENGTH(motivos) > 0;
-
--- Resumen por motivo
-SELECT motivo, COUNT(*) AS filas
-FROM `mm-tse-latam-interviews.challange_marcelo.VENTAS_ANOMALIAS`,
-UNNEST(motivos) AS motivo
-GROUP BY motivo
-ORDER BY filas DESC;
-```
-
----
-
-## 4) Implementación de limpieza → crear `VENTAS_LIMPIA`
-
-> Aplica criterios de la sección 2. Este bloque asume que también filtramos según integridad con `productos`.
-
-```sql
--- A) normalizar + filtros de calidad
+CREATE OR REPLACE TABLE `mm-tse-latam-interviews.challange_marcelo.VENTAS_LIMPIA` AS
 WITH base AS (
   SELECT
     TRIM(CAST(id_venta AS STRING)) AS id_venta,
@@ -295,8 +219,6 @@ calidad AS (
     AND cantidad > 0
     AND precio_moneda_local > 0
 ),
-
--- B) deduplicación por id_venta (defensivo)
 dedupe AS (
   SELECT
     *,
@@ -306,8 +228,6 @@ dedupe AS (
     ) AS rn
   FROM calidad
 ),
-
--- C) asegurar integridad con productos
 con_producto AS (
   SELECT d.*
   FROM dedupe d
@@ -315,30 +235,84 @@ con_producto AS (
     ON CAST(p.id_producto AS STRING) = d.id_producto
   WHERE rn = 1
 )
-
--- D) materializar tabla final
-CREATE OR REPLACE TABLE `mm-tse-latam-interviews.challange_marcelo.VENTAS_LIMPIA` AS
 SELECT id_venta, creation_date, pais, id_producto, cantidad, precio_moneda_local
 FROM con_producto;
 ```
 
-**Verificación (trazabilidad)**
+**Verificación rápida**
 
 ```sql
-SELECT 'original' AS origen, COUNT(*) FROM `mm-tse-latam-interviews.challange_marcelo.ventas`
+SELECT 'original' AS origen, COUNT(*) AS filas
+FROM `mm-tse-latam-interviews.challange_marcelo.ventas`
 UNION ALL
-SELECT 'anomalias', COUNT(*) FROM `mm-tse-latam-interviews.challange_marcelo.VENTAS_ANOMALIAS`
-UNION ALL
-SELECT 'limpia', COUNT(*) FROM `mm-tse-latam-interviews.challange_marcelo.VENTAS_LIMPIA`;
+SELECT 'limpia'   AS origen, COUNT(*) AS filas
+FROM `mm-tse-latam-interviews.challange_marcelo.VENTAS_LIMPIA`;
 ```
 
 ---
 
-## 5) Próximos pasos
+## (Adelanto Fase 3) USD y ranking mensual – consultas base
 
-* Completar **1.6** con resultados e interpretación.
-* Crear vista `v_ventas_usd` (join a `tdc`) y luego el **ranking mensual por país** para el Ejercicio 2.
-* Construir dashboard en Looker Studio con las vistas resultantes.
+> El TDC se normaliza en una vista auxiliar y se exige al calcular USD.
+
+```sql
+-- Vista auxiliar: TDC normalizado por día/país
+CREATE OR REPLACE VIEW `mm-tse-latam-interviews.challange_marcelo.v_tdc_norm` AS
+SELECT
+  DATE(fecha_tdc) AS fecha,
+  CASE
+    WHEN REGEXP_CONTAINS(LOWER(pais), r'^arg') THEN 'AR'
+    WHEN REGEXP_CONTAINS(LOWER(pais), r'^bra') THEN 'BR'
+    WHEN REGEXP_CONTAINS(LOWER(pais), r'^mex') THEN 'MX'
+    ELSE NULL
+  END AS pais,
+  AVG(tdc) AS tdc
+FROM `mm-tse-latam-interviews.challange_marcelo.tdc`
+GROUP BY fecha, pais;
+
+-- Ventas en USD (filtra filas sin match de TDC)
+CREATE OR REPLACE VIEW `mm-tse-latam-interviews.challange_marcelo.v_ventas_usd` AS
+SELECT
+  v.creation_date,
+  FORMAT_DATE('%Y-%m', v.creation_date) AS ym,
+  v.pais,
+  v.id_producto,
+  v.cantidad,
+  v.precio_moneda_local,
+  (v.cantidad * v.precio_moneda_local) / t.tdc AS importe_usd
+FROM `mm-tse-latam-interviews.challange_marcelo.VENTAS_LIMPIA` v
+JOIN `mm-tse-latam-interviews.challange_marcelo.v_tdc_norm` t
+  ON t.pais = v.pais AND t.fecha = v.creation_date;
+
+-- Ranking mensual por país (top N)
+SELECT
+  pais,
+  ym,
+  id_producto,
+  SUM(importe_usd) AS usd_total,
+  RANK() OVER (PARTITION BY pais, ym ORDER BY SUM(importe_usd) DESC) AS rk
+FROM `mm-tse-latam-interviews.challange_marcelo.v_ventas_usd`
+GROUP BY pais, ym, id_producto
+ORDER BY pais, ym, rk;
+```
+
+Con estos resultados podés responder:
+
+1. **Estabilidad** de ventas por producto y país (variación mensual del `usd_total`).
+2. **Diferencias entre países** (comparar `usd_total` por producto entre `AR/BR/MX`).
+
+---
+
+## Notas finales
+
+* **No** alteramos datos (p.ej., no cambiamos `-6` a `6`). Preferimos excluir inconsistencias y **documentar**.
+* `VENTAS_LIMPIA` es **reproducible** y **trazable** desde este README.
+* El TDC se **normaliza** en una vista separada para mantener `VENTAS_LIMPIA` simple y usarla en distintos análisis.
+
+---
+
+**Listo.** Fase 1 (EDA) documentada y criterios cerrados. Cuando quieras, corrés el bloque de **Fase 2** para crear `VENTAS_LIMPIA` y seguimos con el ranking en USD.
+
 
 
 
