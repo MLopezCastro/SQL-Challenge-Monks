@@ -4,8 +4,11 @@
 # SQL Challenge – Media.Monks (BigQuery + Looker Studio)
 
 **Repo:** `SQL-Challenge-Monks`
+
 **Dataset origen:** `mm-tse-latam-interviews.challange_marcelo`
-**Tablas:** `ventas`, `productos`, `tdc`
+
+**Tablas:** `VENTAS`, `PRODUCTOS`, `TDC`
+
 **Período esperado:** **2022-01-01 → 2022-03-31** (Argentina, Brasil, México)
 
 ---
@@ -311,6 +314,7 @@ Con estos resultados podés responder:
 ---
 
 **Listo.** Fase 1 (EDA) documentada y criterios cerrados. Cuando quieras, corrés el bloque de **Fase 2** para crear `VENTAS_LIMPIA` y seguimos con el ranking en USD.
+
 
 
 
