@@ -195,6 +195,37 @@ WHERE v.pais_norm IS NOT NULL AND t.tdc IS NULL;
 
    * Excluir ventas cuyo `id_producto` no exista en `productos`.
    * Excluir ventas sin `tdc` para su país/fecha (o imputar si se define).
+  
+¡dale! te dejo **un único bloque para pegar** debajo de “2) Decisiones de limpieza (resumen)” en tu README —sin crear una tercera tabla, solo documenta criterios para `VENTAS_LIMPIA`:
+
+---
+
+### Notas aclaratorias (lo que hago y por qué)
+
+* **Cantidades negativas/0:** **no invierto el signo** (p.ej. `-6 → 6`), porque el challenge no modela devoluciones y hacerlo inventaría ventas.
+  Con **489/6000 = 8.15%** de filas con `cantidad ≤ 0`, lo trato como **error de carga** y **las excluyo** de `VENTAS_LIMPIA`.
+
+* **Sin tabla extra:** no materializo tabla de rechazados; las filas inválidas **quedan solo en la tabla origen** y se documentan en esta sección.
+
+* **Integridad (1.6):** al construir `VENTAS_LIMPIA` voy a **excluir** ventas cuyo `id_producto` no exista en `productos` y ventas **sin** tipo de cambio (`tdc`) para su país/fecha. (Completaré los números cuando ejecute 1.6.)
+
+---
+
+### Reglas exactas que aplicará `VENTAS_LIMPIA`
+
+1. **`pais`** → normalizo `Arg/Ar → AR`, `Bra/Br → BR`, `Mex/Mx → MX`; descarto valores no mapeables.
+2. **`id_venta`** → obligatorio (excluyo `NULL`/vacío).
+3. **`creation_date`** → dentro de `2022-01-01`–`2022-03-31`.
+4. **`id_producto`** → obligatorio y debe existir en `productos`.
+5. **`cantidad`** → **> 0** (excluyo `≤ 0`).
+6. **`precio_moneda_local`** → **> 0**.
+7. **Deduplicación** (defensivo) por `id_venta`: conservo la fila de **fecha más reciente** y, si empata, **mayor cantidad**.
+8. **TDC** (para cálculos a USD en el Ej. 2): exigiré `tdc` para `pais/fecha`; si no hay match, se **excluye** del cálculo.
+
+---
+
+Cuando termines 1.6, me pasás los conteos y te preparo el bloque final de creación de `VENTAS_LIMPIA` con esos filtros ya integrados.
+
 
 ---
 
@@ -310,6 +341,7 @@ SELECT 'limpia', COUNT(*) FROM `mm-tse-latam-interviews.challange_marcelo.VENTAS
 * Completar **1.6** con resultados e interpretación.
 * Crear vista `v_ventas_usd` (join a `tdc`) y luego el **ranking mensual por país** para el Ejercicio 2.
 * Construir dashboard en Looker Studio con las vistas resultantes.
+
 
 
 
