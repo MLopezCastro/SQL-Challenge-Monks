@@ -196,8 +196,6 @@ WHERE v.pais_norm IS NOT NULL AND t.tdc IS NULL;
    * Excluir ventas cuyo `id_producto` no exista en `productos`.
    * Excluir ventas sin `tdc` para su país/fecha (o imputar si se define).
   
-¡dale! te dejo **un único bloque para pegar** debajo de “2) Decisiones de limpieza (resumen)” en tu README —sin crear una tercera tabla, solo documenta criterios para `VENTAS_LIMPIA`:
-
 ---
 
 ### Notas aclaratorias (lo que hago y por qué)
@@ -341,6 +339,7 @@ SELECT 'limpia', COUNT(*) FROM `mm-tse-latam-interviews.challange_marcelo.VENTAS
 * Completar **1.6** con resultados e interpretación.
 * Crear vista `v_ventas_usd` (join a `tdc`) y luego el **ranking mensual por país** para el Ejercicio 2.
 * Construir dashboard en Looker Studio con las vistas resultantes.
+
 
 
 
