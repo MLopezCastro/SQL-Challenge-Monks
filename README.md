@@ -1,7 +1,3 @@
-﻿# SQL Challenge Monks
-
-tienes razón — mi culpa. te lo dejo **en crudo, como README**, sin envolver en un bloque de código externo. copiá y pegá tal cual 👇
-
 # SQL Challenge – Media.Monks (BigQuery + Looker Studio)
 
 **Repo:** SQL-Challenge-Monks
@@ -311,4 +307,5 @@ SELECT 'limpia', COUNT(*) FROM `mm-tse-latam-interviews.challange_marcelo.VENTAS
 * Completar **1.6** con resultados e interpretación.
 * Crear vista `v_ventas_usd` (join a `tdc`) y luego el **ranking mensual por país** para el Ejercicio 2.
 * Construir dashboard en Looker Studio con las vistas resultantes.
+
 
