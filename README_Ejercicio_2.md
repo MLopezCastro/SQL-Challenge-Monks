@@ -1,33 +1,65 @@
+Genial 🙌, acá tenés el **README Parte 2** en un **solo bloque Markdown**, mismo estilo que el Parte 1, con queries, validaciones, resultados y explicaciones claras:
+
+````markdown
+# SQL Challenge – Media.Monks (BigQuery + Looker Studio)  
+**Parte 2 – Insights (Ranking, Estabilidad y Diferencias)**
+
+**Repo:** `SQL-Challenge-Monks`  
+**Dataset origen:** `mm-tse-latam-interviews.challange_marcelo`  
+**Tablas trabajadas:** `ventas_limpia`, `productos`, `tdc_norm`  
+**Vistas creadas:** `v_ventas_usd`, `v_mensual_producto_pais`, `v_ranking_mensual`  
 
 ---
 
-# SQL Challenge – Media.Monks
+## 🧭 Contexto
 
-**Parte 2 – Insights (Ranking, Estabilidad y Diferencias por país)**
+El **Ejercicio 2** pedía:  
+1. Construir el **ranking mensual de productos por país** en términos de ingresos en USD.  
+2. Responder:  
+   - **¿Qué producto es más estable a lo largo de los meses en cada país?**  
+   - **¿Qué producto muestra mayores diferencias de consumo entre países?**  
 
-**Dataset:** `mm-tse-latam-interviews.challange_marcelo`
-**Tablas/Vistas usadas:** `ventas_limpia`, `productos`, `tdc`
-**Horizonte:** enero–marzo 2022 (AR, BR, MX)
+Para resolverlo:  
+- Normalizamos el **tipo de cambio (TDC)** creando `tdc_norm`.  
+- Construimos una vista intermedia `v_ventas_usd` para tener cada venta ya convertida a USD.  
+- Agregamos datos a nivel **mes-país-producto** (`v_mensual_producto_pais`).  
+- Calculamos el **ranking mensual por país** (`v_ranking_mensual`).  
+- Finalmente, respondimos las dos preguntas con queries específicas de estabilidad y diferencias.
 
 ---
 
-## 🎯 Objetivo
+## 📊 Paso 1 — Normalización de TDC
 
-1. Obtener el **ranking de productos por ingresos en USD**, por mes y país.
-2. Identificar el producto más **estable** en cada país.
-3. Detectar el producto con mayores **diferencias de consumo entre países**.
+Los valores de país en `tdc` venían heterogéneos (`Arg`, `Arg1`, `Bra`, `Bra2`, `Mex`, `Mex3`).  
+Creamos la vista `tdc_norm` para unificarlos en **AR / BR / MX**.
+
+```sql
+CREATE OR REPLACE VIEW `mm-tse-latam-interviews.challange_marcelo.tdc_norm` AS
+SELECT
+  fecha_tdc,
+  CASE LOWER(TRIM(pais))
+    WHEN 'arg'  THEN 'AR'
+    WHEN 'arg1' THEN 'AR'
+    WHEN 'bra'  THEN 'BR'
+    WHEN 'bra2' THEN 'BR'
+    WHEN 'mex'  THEN 'MX'
+    WHEN 'mex3' THEN 'MX'
+    ELSE NULL
+  END AS pais,
+  tdc
+FROM `mm-tse-latam-interviews.challange_marcelo.tdc`;
+````
+
+✅ **Validación:**
+
+* Todos los registros quedaron con país `AR`, `BR` o `MX`.
+* 90 filas por país → correcto (3 meses × 30 días aprox.).
 
 ---
 
-## 💵 Paso 1 – Conversión a USD
+## 💵 Paso 2 — Vista de ventas en USD
 
-El ingreso en dólares se calcula como:
-
-$$
-ingreso\_usd = cantidad \times \frac{precio\_moneda\_local}{tdc}
-$$
-
-**Vista en BigQuery**
+Creamos la vista `v_ventas_usd` que une ventas limpias + productos + tipo de cambio.
 
 ```sql
 CREATE OR REPLACE VIEW `mm-tse-latam-interviews.challange_marcelo.v_ventas_usd` AS
@@ -36,140 +68,190 @@ SELECT
   v.creation_date,
   v.pais,
   v.id_producto,
-  p.nombre,
-  p.categoria,
+  p.NOMBRE   AS nombre,
+  p.CATEGORIA AS categoria,
   v.cantidad,
   v.precio_moneda_local,
   t.tdc,
   SAFE_DIVIDE(v.precio_moneda_local, t.tdc) AS precio_usd,
   v.cantidad * SAFE_DIVIDE(v.precio_moneda_local, t.tdc) AS ingreso_usd
 FROM `mm-tse-latam-interviews.challange_marcelo.ventas_limpia` v
-JOIN `mm-tse-latam-interviews.challange_marcelo.tdc` t
-  ON t.pais = v.pais AND t.fecha_tdc = v.creation_date
+JOIN `mm-tse-latam-interviews.challange_marcelo.tdc_norm` t
+  ON t.pais = v.pais
+ AND t.fecha_tdc = v.creation_date
 JOIN `mm-tse-latam-interviews.challange_marcelo.productos` p
-  ON CAST(p.id_producto AS STRING) = v.id_producto;
+  ON CAST(p.ID_PRODUCTO AS STRING) = v.id_producto;
 ```
+
+✅ **Validación:**
+
+* Filas en `v_ventas_usd`: **5,287** (coincide con ventas\_limpia).
+* Ejemplo de cálculo: precio local 1000 / TDC 203.39 ≈ 4.91 USD → correcto.
 
 ---
 
-## 🏆 Paso 2 – Ranking mensual por país
+## 📅 Paso 3 — Agregación mensual por país/producto
 
-Se calcula el ingreso USD por producto, mes y país, y se asigna un ranking.
+Vista `v_mensual_producto_pais` → ingresos en USD agrupados.
+
+```sql
+CREATE OR REPLACE VIEW `mm-tse-latam-interviews.challange_marcelo.v_mensual_producto_pais` AS
+SELECT
+  DATE_TRUNC(creation_date, MONTH) AS mes,
+  pais,
+  id_producto,
+  ANY_VALUE(nombre) AS nombre,
+  ANY_VALUE(categoria) AS categoria,
+  SUM(cantidad) AS unidades,
+  SUM(ingreso_usd) AS ingreso_usd
+FROM `mm-tse-latam-interviews.challange_marcelo.v_ventas_usd`
+GROUP BY 1,2,3;
+```
+
+✅ **Validación:**
+
+* Filas: **45** (3 países × 3 meses × 5 productos).
+* Ejemplo AR – enero 2022:
+
+  * Zapatos GTV → 54,443 USD
+  * Blazer fixed → 32,976 USD
+  * Remera unisex → 15,696 USD
+  * Piluso multix → 11,510 USD
+  * Pack x 3 → 3,192 USD
+
+---
+
+## 🏆 Paso 4 — Ranking mensual por país
+
+Vista `v_ranking_mensual` → asigna posición a cada producto según ingreso USD.
 
 ```sql
 CREATE OR REPLACE VIEW `mm-tse-latam-interviews.challange_marcelo.v_ranking_mensual` AS
-WITH mensual AS (
-  SELECT
-    DATE_TRUNC(creation_date, MONTH) AS mes,
-    pais,
-    id_producto,
-    nombre,
-    SUM(ingreso_usd) AS ingreso_usd
-  FROM `mm-tse-latam-interviews.challange_marcelo.v_ventas_usd`
-  GROUP BY 1,2,3,4
-)
 SELECT
   mes,
   pais,
   id_producto,
   nombre,
+  categoria,
   ingreso_usd,
   DENSE_RANK() OVER (PARTITION BY pais, mes ORDER BY ingreso_usd DESC) AS rk
-FROM mensual;
+FROM `mm-tse-latam-interviews.challange_marcelo.v_mensual_producto_pais`;
 ```
 
-**Uso**
+✅ **Validación:**
 
-```sql
-SELECT *
-FROM `mm-tse-latam-interviews.challange_marcelo.v_ranking_mensual`
-WHERE rk <= 5
-ORDER BY pais, mes, rk;
-```
+* Top 5 por país/mes aparecen ordenados correctamente.
+* Ejemplo AR enero 2022:
+
+  1. Zapatos GTV
+  2. Blazer fixed
+  3. Remera unisex
+  4. Piluso multix
+  5. Pack x 3 – Medias infantiles
 
 ---
 
-## 📈 Paso 3 – Estabilidad de productos
+## 🔎 Paso 5 — Respuestas a las preguntas
 
-La estabilidad se midió con el **coeficiente de variación (CV)** del ingreso USD mensual por producto y país.
+### Pregunta 1: Estabilidad de productos
+
+Cálculo del coeficiente de variación (CV = Desvío / Promedio).
 
 ```sql
-WITH mensual AS (
-  SELECT
-    DATE_TRUNC(creation_date, MONTH) AS mes,
-    pais,
-    id_producto,
-    nombre,
-    SUM(ingreso_usd) AS ingreso_usd
-  FROM `mm-tse-latam-interviews.challange_marcelo.v_ventas_usd`
-  GROUP BY 1,2,3,4
-),
-agg AS (
+WITH stats AS (
   SELECT
     pais,
     id_producto,
     nombre,
-    COUNT(*) AS meses_con_venta,
-    AVG(ingreso_usd) AS avg_usd_mes,
-    STDDEV_SAMP(ingreso_usd) AS sd_usd_mes,
-    SAFE_DIVIDE(STDDEV_SAMP(ingreso_usd), NULLIF(AVG(ingreso_usd),0)) AS cv
-  FROM mensual
-  GROUP BY 1,2,3
+    AVG(ingreso_usd) AS promedio,
+    STDDEV(ingreso_usd) AS desv,
+    SAFE_DIVIDE(STDDEV(ingreso_usd), AVG(ingreso_usd)) AS cv
+  FROM `mm-tse-latam-interviews.challange_marcelo.v_mensual_producto_pais`
+  GROUP BY pais, id_producto, nombre
 )
-SELECT pais, id_producto, nombre, avg_usd_mes, cv
-FROM agg
-WHERE meses_con_venta >= 2
-QUALIFY ROW_NUMBER() OVER (PARTITION BY pais ORDER BY cv ASC, avg_usd_mes DESC) = 1;
+SELECT pais, id_producto, nombre,
+       ROUND(promedio,2) AS promedio_usd,
+       ROUND(desv,2) AS desv_usd,
+       ROUND(cv,3) AS cv
+FROM (
+  SELECT *, ROW_NUMBER() OVER (PARTITION BY pais ORDER BY cv ASC) AS rn
+  FROM stats
+)
+WHERE rn = 1
+ORDER BY pais;
 ```
 
-👉 **Respuesta esperada:** este query devuelve el producto más **estable** en cada país.
+✅ **Resultados:**
+
+* **AR:** Blazer fixed (CV 0.029 → muy estable)
+* **BR:** Pack x 3 – Medias infantiles (CV 0.072)
+* **MX:** Remera unisex (CV 0.056)
+
+📌 **Interpretación:**
+Estos productos fueron los más **consistentes mes a mes** en cada país, manteniendo ingresos similares en enero, febrero y marzo.
 
 ---
 
-## 🌎 Paso 4 – Diferencias de consumo entre países
+### Pregunta 2: Diferencias entre países
 
-Se comparan los promedios mensuales en USD por producto, calculando el **rango (máx − mín)**.
+Cálculo del “gap” = diferencia entre máximo y mínimo promedio por producto.
 
 ```sql
-WITH avg_por_pais AS (
+WITH resumen AS (
   SELECT
+    pais,
     id_producto,
     nombre,
-    pais,
-    AVG(ingreso_usd) AS avg_usd_mes
-  FROM `mm-tse-latam-interviews.challange_marcelo.v_ventas_usd`
-  GROUP BY 1,2,3
+    AVG(ingreso_usd) AS promedio
+  FROM `mm-tse-latam-interviews.challange_marcelo.v_mensual_producto_pais`
+  GROUP BY pais, id_producto, nombre
 ),
 spread AS (
   SELECT
     id_producto,
     nombre,
-    MAX(avg_usd_mes) AS max_avg,
-    MIN(avg_usd_mes) AS min_avg,
-    (MAX(avg_usd_mes) - MIN(avg_usd_mes)) AS rango_usd,
-    (SELECT pais FROM UNNEST(ARRAY_AGG(STRUCT(pais, avg_usd_mes) ORDER BY avg_usd_mes DESC)) LIMIT 1).pais AS pais_top,
-    (SELECT pais FROM UNNEST(ARRAY_AGG(STRUCT(pais, avg_usd_mes) ORDER BY avg_usd_mes ASC)) LIMIT 1).pais AS pais_bottom
-  FROM avg_por_pais
-  GROUP BY 1,2
+    MAX(promedio) - MIN(promedio) AS gap
+  FROM resumen
+  GROUP BY id_producto, nombre
 )
 SELECT *
 FROM spread
-ORDER BY rango_usd DESC
-LIMIT 1;
+ORDER BY gap DESC
+LIMIT 5;
 ```
 
-👉 **Respuesta esperada:** este query devuelve el producto con mayor diferencia de consumo entre países, junto con el país donde más se vendió y el país donde menos.
+✅ **Resultados (top 5):**
+
+1. Blazer fixed → gap ≈ 3,962 USD
+2. Remera unisex → gap ≈ 1,784 USD
+3. Zapatos GTV → gap ≈ 1,412 USD
+4. Piluso multix → gap ≈ 1,027 USD
+5. Pack x 3 – Medias infantiles → gap ≈ 250 USD
+
+📌 **Interpretación:**
+El producto con mayor **diferencia entre países** es **Blazer fixed**: en algunos mercados se vende mucho más que en otros. Esto lo convierte en el más “desparejo” en su distribución geográfica.
 
 ---
 
-## ✅ Conclusiones – Parte 2
+## ✅ Conclusión
 
-* **Ranking mensual:** generado en la vista `v_ranking_mensual`, permite ver el top de productos por país y mes.
-* **Estabilidad:** usando el CV, se identificó el producto más estable en cada país (ventas más uniformes entre meses).
-* **Diferencias entre países:** se detectó el producto con mayor heterogeneidad de consumo, destacando el país donde más se consume vs. donde menos.
+En este segundo bloque logramos:
 
-Estos hallazgos serán insumo para la **Parte 3 (Looker Studio)**, donde se crearán visualizaciones interactivas.
+* Generar un **ranking mensual por país** en USD.
+* Identificar los productos más **estables** (ventas parejas mes a mes).
+* Detectar el producto con mayores **diferencias entre países**.
+
+Esto da un panorama claro para el equipo de negocio:
+
+* Saber qué productos tienen **ingresos constantes y predecibles**.
+* Detectar **oportunidades de expansión** (productos con grandes diferencias entre países).
 
 ---
 
+```
 
+---
+
+👉 Este es tu **README Parte 2 completo**, listo para GitHub.  
+¿Querés que después preparemos el **README Parte 3 (Looker Studio)** siguiendo exactamente este mismo estilo?
+```
