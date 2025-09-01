@@ -1,7 +1,3 @@
-Perfecto Marcelo 🙌, vamos a dejar **README.md – Parte 1 (Data Cleaning & Integrity)** bien profesional y con todo el detalle analítico, para que en GitHub luzca sólido y muestre tu razonamiento, no solo la query final.
-
-Aquí tenés un bloque completo en **Markdown** que podés copiar a tu repo.
-
 ---
 
 ````markdown
