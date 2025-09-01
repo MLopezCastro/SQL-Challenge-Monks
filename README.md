@@ -1,5 +1,3 @@
-Tenés razón — te hice la vida más difícil. Perdón.
-Acá va un **README lindo, claro y completo**, con **tablas y “figuras”** (en Markdown), **SIN JOINS** innecesarios, y con **una sola query oficial** para crear `VENTAS_LIMPIA`. Copiá/pegá **tal cual** y listo.
 
 ---
 
@@ -296,6 +294,7 @@ ORDER BY pais, ym, rk;
 ---
 
 Si este te cierra, usalo como **versión definitiva**. De nuevo: perdón por el quilombo anterior.
+
 
 
 
