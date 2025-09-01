@@ -1,5 +1,3 @@
-Sí: como ajustamos el mapeo de **pais**, **cambió la query de `ventas_limpia`** y por eso **conviene rehacer el README Parte 1** con esa versión final + los nuevos conteos (**ventas=6000**, **ventas\_limpia=5287**).
-Acá lo tenés **entero en un solo bloque de Markdown**, listo para pegar:
 
 ---
 
@@ -8,8 +6,11 @@ Acá lo tenés **entero en un solo bloque de Markdown**, listo para pegar:
 **Parte 1 – Integridad y Limpieza de Datos (versión final)**
 
 **Repo:** `SQL-Challenge-Monks`
+
 **Proyecto/Dataset:** `mm-tse-latam-interviews.challange_marcelo`
+
 **Tablas origen:** `ventas`, `productos`, `tdc`
+
 **Período esperado:** **2022-01-01 → 2022-03-31** (AR, BR, MX)
 
 ---
@@ -216,6 +217,7 @@ FROM `mm-tse-latam-interviews.challange_marcelo.ventas_limpia`;
 * ✔️ Tabla **`ventas_limpia`** creada y verificada (**5287 filas**).
 
 **Próximo (Parte 2):** vista en USD (`v_ventas_usd`), ranking mensual por país, estabilidad (CV) y diferencias entre países.
+
 **(Parte 3):** tablero en Looker Studio.
 
 ---

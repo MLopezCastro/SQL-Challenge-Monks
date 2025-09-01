@@ -19,12 +19,20 @@ El **Ejercicio 2** pedía:
    - **¿Qué producto es más estable a lo largo de los meses en cada país?**  
    - **¿Qué producto muestra mayores diferencias de consumo entre países?**  
 
+<<<<<<< HEAD
 Para resolverlo:  
 - Normalizamos el **tipo de cambio (TDC)** creando `tdc_norm`.  
 - Construimos una vista intermedia `v_ventas_usd` para tener cada venta ya convertida a USD.  
 - Agregamos datos a nivel **mes-país-producto** (`v_mensual_producto_pais`).  
 - Calculamos el **ranking mensual por país** (`v_ranking_mensual`).  
 - Finalmente, respondimos las dos preguntas con queries específicas de estabilidad y diferencias.
+=======
+**Dataset:** `mm-tse-latam-interviews.challange_marcelo`
+
+**Tablas/Vistas usadas:** `ventas_limpia`, `productos`, `tdc`
+
+**Horizonte:** enero–marzo 2022 (AR, BR, MX)
+>>>>>>> 13dad82c8c1010f38801783027a846f820df994a
 
 ---
 
