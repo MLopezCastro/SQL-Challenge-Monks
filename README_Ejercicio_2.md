@@ -1,5 +1,4 @@
 
-markdown
 # SQL Challenge – Media.Monks (BigQuery + Looker Studio)  
 
 **Parte 2 – Insights (Ranking, Estabilidad y Diferencias)**
