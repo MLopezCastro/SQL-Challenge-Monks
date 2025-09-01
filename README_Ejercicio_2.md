@@ -58,7 +58,7 @@ FROM `mm-tse-latam-interviews.challange_marcelo.tdc`;
 * 90 filas por país → correcto (3 meses × 30 días aprox.).
 
 ---
-
+```
 ## 💵 Paso 2 — Vista de ventas en USD
 
 Creamos la vista `v_ventas_usd` que une ventas limpias + productos + tipo de cambio.
