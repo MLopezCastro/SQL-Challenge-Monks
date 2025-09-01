@@ -6,7 +6,9 @@
 **Parte 2 – Insights (Ranking, Estabilidad y Diferencias por país)**
 
 **Dataset:** `mm-tse-latam-interviews.challange_marcelo`
+
 **Tablas/Vistas usadas:** `ventas_limpia`, `productos`, `tdc`
+
 **Horizonte:** enero–marzo 2022 (AR, BR, MX)
 
 ---
