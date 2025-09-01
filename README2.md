@@ -1,4 +1,3 @@
-Perfecto 💪, acá tenés **TODO el README de la Parte 1 en un solo bloque continuo de texto Markdown**. Lo copiás tal cual en tu `README.md` y se va a ver bien en GitHub (con colores en SQL, tablas, títulos, etc.), sin barras de scroll extrañas en el archivo final.
 
 ---
 
@@ -7,8 +6,11 @@ Perfecto 💪, acá tenés **TODO el README de la Parte 1 en un solo bloque cont
 **Parte 1 – Integridad y Limpieza de Datos**
 
 **Repo:** `SQL-Challenge-Monks`
+
 **Proyecto/Dataset:** `mm-tse-latam-interviews.challange_marcelo`
+
 **Tablas origen:** `ventas`, `productos`, `tdc`
+
 **Período esperado:** **2022-01-01 → 2022-03-31** (AR, BR, MX)
 
 ---
