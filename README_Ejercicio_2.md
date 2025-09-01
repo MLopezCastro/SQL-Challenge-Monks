@@ -1,12 +1,15 @@
-Perfecto, Marcelo 🙌. Te paso el **README Parte 2 limpio y en un solo bloque Markdown**, sin restos de conflictos (`<<<<<<< HEAD`) ni basura visual. Podés copiarlo directo a tu repo y se verá prolijo, igual que el Parte 1.
 
 markdown
 # SQL Challenge – Media.Monks (BigQuery + Looker Studio)  
+
 **Parte 2 – Insights (Ranking, Estabilidad y Diferencias)**
 
 **Repo:** `SQL-Challenge-Monks`  
-**Dataset origen:** `mm-tse-latam-interviews.challange_marcelo`  
-**Tablas trabajadas:** `ventas_limpia`, `productos`, `tdc_norm`  
+
+**Dataset origen:** `mm-tse-latam-interviews.challange_marcelo`
+
+**Tablas trabajadas:** `ventas_limpia`, `productos`, `tdc_norm` 
+
 **Vistas creadas:** `v_ventas_usd`, `v_mensual_producto_pais`, `v_ranking_mensual`  
 
 ---
