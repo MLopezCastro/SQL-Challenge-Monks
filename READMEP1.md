@@ -1,5 +1,3 @@
-Sí: como ajustamos el mapeo de **pais**, **cambió la query de `ventas_limpia`** y por eso **conviene rehacer el README Parte 1** con esa versión final + los nuevos conteos (**ventas=6000**, **ventas\_limpia=5287**).
-Acá lo tenés **entero en un solo bloque de Markdown**, listo para pegar:
 
 ---
 
