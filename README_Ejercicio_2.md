@@ -51,8 +51,8 @@ SELECT
   tdc
 FROM `mm-tse-latam-interviews.challange_marcelo.tdc`;
 
-
-✅ **Validación:**
+```
+## ✅ Validación:
 
 * Todos los registros quedaron con país `AR`, `BR` o `MX`.
 * 90 filas por país → correcto (3 meses × 30 días aprox.).
