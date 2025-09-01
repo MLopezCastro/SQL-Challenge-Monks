@@ -133,22 +133,7 @@ WHERE creation_date < DATE '2022-01-01'
 
 ---
 
-### 6) Integridad entre tablas
 
-**6.A) `ventas` vs `productos`**
-**Resultado:** **0** productos huérfanos (`id_producto` siempre existe en `productos`).
-
-```sql
-SELECT COUNT(*) AS productos_sin_match
-FROM `mm-tse-latam-interviews.challange_marcelo.ventas` v
-LEFT JOIN `mm-tse-latam-interviews.challange_marcelo.productos` p
-  ON CAST(v.id_producto AS STRING) = CAST(p.id_producto AS STRING)
-WHERE p.id_producto IS NULL;
-```
-
-**6.B) `tdc` (tipo de cambio)**
-`tdc.pais` viene con variantes (`Arg/Arg1`, `Bra/Bra2`, `Mex/Mex3`).
-Para **USD** (Ej. 2) normalizaremos `tdc` (por prefijo) y lo exigiremos **al convertir**, no en la tabla limpia.
 
 ---
 
@@ -294,6 +279,7 @@ ORDER BY pais, ym, rk;
 ---
 
 Si este te cierra, usalo como **versión definitiva**. De nuevo: perdón por el quilombo anterior.
+
 
 
 
