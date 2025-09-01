@@ -251,5 +251,5 @@ Esto da un panorama claro para el equipo de negocio:
 
 ```
 
-¿Querés que ahora preparemos el **Parte 3 (Looker Studio)** con este mismo formato monobloque?
+
 ```
