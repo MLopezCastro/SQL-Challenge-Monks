@@ -249,7 +249,3 @@ Esto da un panorama claro para el equipo de negocio:
 
 ---
 
-```
-
-
-```
