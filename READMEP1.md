@@ -7,7 +7,9 @@
 
 **Repo:** `SQL-Challenge-Monks`
 **Proyecto/Dataset:** `mm-tse-latam-interviews.challange_marcelo`
+
 **Tablas origen:** `ventas`, `productos`, `tdc`
+
 **Período esperado:** **2022-01-01 → 2022-03-31** (AR, BR, MX)
 
 ---
