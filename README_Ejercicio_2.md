@@ -1,4 +1,4 @@
-Genial 🙌, acá tenés el **README Parte 2** en un **solo bloque Markdown**, mismo estilo que el Parte 1, con queries, validaciones, resultados y explicaciones claras:
+Perfecto, Marcelo 🙌. Te paso el **README Parte 2 limpio y en un solo bloque Markdown**, sin restos de conflictos (`<<<<<<< HEAD`) ni basura visual. Podés copiarlo directo a tu repo y se verá prolijo, igual que el Parte 1.
 
 ````markdown
 # SQL Challenge – Media.Monks (BigQuery + Looker Studio)  
@@ -19,20 +19,12 @@ El **Ejercicio 2** pedía:
    - **¿Qué producto es más estable a lo largo de los meses en cada país?**  
    - **¿Qué producto muestra mayores diferencias de consumo entre países?**  
 
-<<<<<<< HEAD
 Para resolverlo:  
 - Normalizamos el **tipo de cambio (TDC)** creando `tdc_norm`.  
 - Construimos una vista intermedia `v_ventas_usd` para tener cada venta ya convertida a USD.  
 - Agregamos datos a nivel **mes-país-producto** (`v_mensual_producto_pais`).  
 - Calculamos el **ranking mensual por país** (`v_ranking_mensual`).  
 - Finalmente, respondimos las dos preguntas con queries específicas de estabilidad y diferencias.
-=======
-**Dataset:** `mm-tse-latam-interviews.challange_marcelo`
-
-**Tablas/Vistas usadas:** `ventas_limpia`, `productos`, `tdc`
-
-**Horizonte:** enero–marzo 2022 (AR, BR, MX)
->>>>>>> 13dad82c8c1010f38801783027a846f820df994a
 
 ---
 
@@ -258,8 +250,5 @@ Esto da un panorama claro para el equipo de negocio:
 
 ```
 
----
-
-👉 Este es tu **README Parte 2 completo**, listo para GitHub.  
-¿Querés que después preparemos el **README Parte 3 (Looker Studio)** siguiendo exactamente este mismo estilo?
+¿Querés que ahora preparemos el **Parte 3 (Looker Studio)** con este mismo formato monobloque?
 ```
