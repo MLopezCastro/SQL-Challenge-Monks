@@ -1,107 +1,152 @@
+Perfecto 💪, acá tenés **TODO el README de la Parte 1 en un solo bloque continuo de texto Markdown**. Lo copiás tal cual en tu `README.md` y se va a ver bien en GitHub (con colores en SQL, tablas, títulos, etc.), sin barras de scroll extrañas en el archivo final.
 
 ---
 
-````markdown
-# 🧹 Challenge Media.Monks – Parte 1: Integridad y Limpieza de Datos
+# SQL Challenge – Media.Monks (BigQuery + Looker Studio)
 
-Este proyecto corresponde a un challenge técnico para **Media.Monks**, utilizando datos de ventas de un mayorista de ropa entre **enero y marzo 2022** para Argentina, Brasil y México.  
-El objetivo de esta primera parte es **auditar la calidad de los datos**, identificar inconsistencias y crear una tabla confiable llamada `ventas_limpia` en **BigQuery**.
+**Parte 1 – Integridad y Limpieza de Datos**
 
----
-
-## 📂 Dataset original
-- **`ventas`**: registros de ventas individuales.  
-- **`productos`**: catálogo de productos.  
-- **`tdc`**: tipos de cambio diarios (moneda local → USD).  
+**Repo:** `SQL-Challenge-Monks`
+**Proyecto/Dataset:** `mm-tse-latam-interviews.challange_marcelo`
+**Tablas origen:** `ventas`, `productos`, `tdc`
+**Período esperado:** **2022-01-01 → 2022-03-31** (AR, BR, MX)
 
 ---
 
-## 🔎 Auditoría de calidad de datos
+## 🧭 Enfoque por fases
 
-Antes de limpiar, analicé los posibles problemas:
+1. **EDA / Data Profiling:** medir calidad y definir reglas (explico qué y por qué).
+2. **Limpieza:** crear **`ventas_limpia`** con reglas reproducibles (sin inventar datos).
+3. (Próximo) **Insights:** USD, ranking mensual, estabilidad y diferencias por país.
 
-### 1. Valores nulos
+> **Decisión clave:** no “arreglo” datos inválidos (p. ej., no convierto negativos a positivos). Si `cantidad ≤ 0`, la fila **no es confiable para ingresos** → se excluye.
+
+---
+
+## 📊 Fase 1 — EDA / Data Profiling sobre `ventas`
+
+### 1) Tamaño y rango temporal
+
+| Métrica       | Valor observado |
+| ------------- | --------------: |
+| Filas totales |       **6,000** |
+| Fecha mínima  |  **2022-01-01** |
+| Fecha máxima  |  **2022-03-31** |
+
+**Queries**
+
 ```sql
-SELECT
-  COUNTIF(id_venta IS NULL)           AS n_id_venta_null,
-  COUNTIF(creation_date IS NULL)      AS n_creation_null,
-  COUNTIF(pais IS NULL OR TRIM(pais)='') AS n_pais_vacio,
-  COUNTIF(id_producto IS NULL)        AS n_id_producto_null,
-  COUNTIF(precio_moneda_local IS NULL) AS n_precio_null,
-  COUNTIF(cantidad IS NULL)            AS n_cantidad_null
+SELECT COUNT(*) AS filas
 FROM `mm-tse-latam-interviews.challange_marcelo.ventas`;
-````
 
-📊 *Resultado esperado (ejemplo gráfico):*
-
-* `id_venta`: 0 nulos
-* `creation_date`: 2 nulos
-* `pais`: 5 vacíos
-* `id_producto`: 1 nulo
-* `precio_moneda_local`: 3 nulos
-* `cantidad`: 2 nulos
-
-> **Decisión**: todas las filas con campos clave nulos fueron descartadas.
-
----
-
-### 2. Países válidos
-
-```sql
-SELECT DISTINCT pais
-FROM `mm-tse-latam-interviews.challange_marcelo.ventas`
-ORDER BY 1;
+SELECT MIN(creation_date) AS min_fecha, MAX(creation_date) AS max_fecha
+FROM `mm-tse-latam-interviews.challange_marcelo.ventas`;
 ```
 
-📊 *Resultado esperado:*
-Encontré variantes como `AR`, `ARG`, `Argentina`.
+---
 
-> **Decisión**: normalizar a `AR`, `BR`, `MX` y descartar cualquier otro valor.
+### 2) País (valores crudos) → normalización
+
+| pais (crudo) | filas |
+| -----------: | ----: |
+|          Arg | 1,925 |
+|          Mex | 1,918 |
+|          Bra | 1,911 |
+|           Br |    89 |
+|           Mx |    82 |
+|           Ar |    75 |
+
+**Hallazgo:** hay variantes de mayúsculas/minúsculas/abreviaturas (`Arg/Ar`, `Bra/Br`, `Mex/Mx`).
+**Regla:** normalizar a **`AR` / `BR` / `MX`** y descartar lo no mapeable.
+
+**Query**
+
+```sql
+SELECT pais, COUNT(*) AS filas
+FROM `mm-tse-latam-interviews.challange_marcelo.ventas`
+GROUP BY pais
+ORDER BY filas DESC;
+```
 
 ---
 
-### 3. Duplicados de ID\_VENTA
+### 3) Clave `id_venta`
+
+| Chequeo                   | Resultado |
+| ------------------------- | --------: |
+| `id_venta` vacío/nulo     |   **244** |
+| Duplicados (en no-vacíos) |     **0** |
+
+**Regla:** `id_venta` es **obligatorio** → excluir vacíos/nulos.
+Si en futuras cargas aparecen duplicados, conservar **fecha más reciente** y, si empata, **mayor `cantidad`**.
+
+**Queries**
 
 ```sql
+SELECT COUNT(*) AS id_venta_vacio
+FROM `mm-tse-latam-interviews.challange_marcelo.ventas`
+WHERE id_venta IS NULL OR TRIM(id_venta) = '';
+
 SELECT id_venta, COUNT(*) AS repeticiones
 FROM `mm-tse-latam-interviews.challange_marcelo.ventas`
-GROUP BY 1
+WHERE id_venta IS NOT NULL AND TRIM(id_venta) <> ''
+GROUP BY id_venta
 HAVING COUNT(*) > 1
-ORDER BY repeticiones DESC;
+ORDER BY repeticiones DESC
+LIMIT 50;
 ```
-
-📊 *Resultado esperado:*
-Algunos `id_venta` repetidos con diferentes cantidades o fechas.
-
-> **Decisión**: quedarme con **la última ocurrencia** (`creation_date DESC`) y, en caso de empate, la de mayor `cantidad` (interpretado como corrección final del proceso de carga).
 
 ---
 
-### 4. Outliers simples
+### 4) Cantidad y precio (valores no válidos)
+
+| Chequeo                            | Resultado |
+| ---------------------------------- | --------: |
+| `cantidad ≤ 0` (o nula)            |   **489** |
+| `precio_moneda_local ≤ 0` (o nula) |     **0** |
+
+**Regla:** excluir filas con `cantidad ≤ 0` o `precio_moneda_local ≤ 0`.
+
+**Queries**
 
 ```sql
-SELECT
-  COUNTIF(cantidad <= 0) AS cantidad_invalidas,
-  COUNTIF(precio_moneda_local <= 0) AS precios_invalidos
-FROM `mm-tse-latam-interviews.challange_marcelo.ventas`;
+SELECT COUNT(*) AS cant_no_positiva
+FROM `mm-tse-latam-interviews.challange_marcelo.ventas`
+WHERE cantidad IS NULL OR cantidad <= 0;
+
+SELECT COUNT(*) AS precio_no_positivo
+FROM `mm-tse-latam-interviews.challange_marcelo.ventas`
+WHERE precio_moneda_local IS NULL OR precio_moneda_local <= 0;
 ```
-
-📊 *Resultado esperado:*
-
-* Ventas con cantidad = 0 o precio = 0.
-
-> **Decisión**: descartar todas las filas con valores no positivos.
 
 ---
 
-## ✅ Creación de tabla limpia `ventas_limpia`
+### 5) Fechas fuera de rango (enero–marzo 2022)
 
-Con base en los hallazgos, apliqué las siguientes reglas:
+| Chequeo                          | Resultado |
+| -------------------------------- | --------: |
+| Fuera de 2022-01-01 ↔ 2022-03-31 |     **0** |
 
-* Normalización de países → solo `AR`, `BR`, `MX`.
-* Eliminación de nulos en campos clave.
-* Exclusión de valores no positivos.
-* Deduplicación por `id_venta` con criterio de última fecha / mayor cantidad.
+**Query**
+
+```sql
+SELECT COUNT(*) AS fechas_fuera_de_rango
+FROM `mm-tse-latam-interviews.challange_marcelo.ventas`
+WHERE creation_date < DATE '2022-01-01'
+   OR creation_date > DATE '2022-03-31';
+```
+
+---
+
+## ✅ Fase 2 — Creación de `ventas_limpia` (oficial)
+
+**Criterios aplicados**
+
+* Normalizar `pais` → `AR` / `BR` / `MX`.
+* Excluir nulos/vacíos en campos clave: `id_venta`, `creation_date`, `id_producto`.
+* Excluir `cantidad ≤ 0` y `precio_moneda_local ≤ 0`.
+* Deduplicar por `id_venta`: **última** por fecha; si empata, **mayor `cantidad`**.
+* *Sin joins en esta fase* (los cruces con `tdc`/`productos` se usarán en la Parte 2).
 
 ```sql
 CREATE OR REPLACE TABLE `mm-tse-latam-interviews.challange_marcelo.ventas_limpia` AS
@@ -109,7 +154,16 @@ WITH base AS (
   SELECT
     CAST(id_venta AS STRING)            AS id_venta,
     DATE(creation_date)                 AS creation_date,
-    UPPER(TRIM(pais))                   AS pais,
+    -- Normalización explícita de país (mapea variantes observadas)
+    CASE UPPER(TRIM(pais))
+      WHEN 'ARG' THEN 'AR'
+      WHEN 'AR'  THEN 'AR'
+      WHEN 'BRA' THEN 'BR'
+      WHEN 'BR'  THEN 'BR'
+      WHEN 'MEX' THEN 'MX'
+      WHEN 'MX'  THEN 'MX'
+      ELSE NULL
+    END                                 AS pais,
     CAST(id_producto AS STRING)         AS id_producto,
     SAFE_CAST(precio_moneda_local AS NUMERIC) AS precio_moneda_local,
     SAFE_CAST(cantidad AS INT64)        AS cantidad
@@ -119,9 +173,9 @@ filtrada AS (
   SELECT *
   FROM base
   WHERE
-    id_venta IS NOT NULL
+    id_venta IS NOT NULL AND TRIM(id_venta) <> ''
     AND creation_date IS NOT NULL
-    AND id_producto IS NOT NULL
+    AND id_producto IS NOT NULL AND TRIM(id_producto) <> ''
     AND precio_moneda_local IS NOT NULL AND precio_moneda_local > 0
     AND cantidad IS NOT NULL AND cantidad > 0
     AND pais IN ('AR','BR','MX')
@@ -143,44 +197,35 @@ SELECT * FROM dedupe;
 
 ---
 
-## 📊 Comparación antes y después
+## 📈 Control de impacto (antes vs. después)
+
+**Query**
 
 ```sql
-SELECT 'ventas' src, COUNT(*) AS filas FROM `mm-tse-latam-interviews.challange_marcelo.ventas`
+SELECT 'ventas' AS tabla, COUNT(*) AS filas
+FROM `mm-tse-latam-interviews.challange_marcelo.ventas`
 UNION ALL
-SELECT 'ventas_limpia', COUNT(*) FROM `mm-tse-latam-interviews.challange_marcelo.ventas_limpia`;
+SELECT 'ventas_limpia' AS tabla, COUNT(*) AS filas
+FROM `mm-tse-latam-interviews.challange_marcelo.ventas_limpia`;
 ```
 
-📊 *Resultado esperado (ejemplo):*
-
-* `ventas`: 10,000 filas
-* `ventas_limpia`: 9,742 filas
-
-> Se removió un \~2.6% de filas debido a errores, nulos o duplicados.
+> Completar con el resultado al ejecutar en tu dataset (deja evidencia del % filtrado).
 
 ---
 
-## 📝 Conclusión
+## ✅ Estado de entrega – Parte 1
 
-En esta primera parte logré:
+* ✔️ EDA documentado con métricas clave.
+* ✔️ Reglas de limpieza justificadas.
+* ✔️ Tabla **`ventas_limpia`** creada en BigQuery (reproducible).
 
-* Auditar la tabla `ventas` y detectar problemas de **calidad de datos**.
-* Documentar cada decisión de limpieza (nulos, outliers, duplicados, países inválidos).
-* Generar una tabla confiable **`ventas_limpia`** que servirá como base para los siguientes análisis (ranking de productos e insights).
-
----
-
-➡️ **Próximos pasos (Parte 2):**
-Construir métricas en USD, generar rankings mensuales por país y analizar estabilidad y diferencias de consumo entre productos.
-
-```
+**Próximo (Parte 2):** métrica en USD (vista), ranking mensual por país, estabilidad por CV y diferencias entre países.
+**(Parte 3):** tablero en Looker Studio.
 
 ---
 
-📌 Esto ya te deja una **Parte 1 impecable para GitHub**:  
-- Explica tu razonamiento (qué detectaste y por qué limpiaste).  
-- Tiene queries de exploración + la final de creación.  
-- Incluye comparaciones y mini-gráficos (podés luego subir capturas de Looker Studio o matplotlib si querés).  
+---
 
-¿Querés que en el README agreguemos también **capturas visuales de los conteos de nulos/outliers en bar plots** (hechas en Python) para que luzca todavía más visual?
-```
+Así queda limpio, **un solo bloque**, sin cortes.
+¿Querés que ahora preparemos de la misma forma la **Parte 2** para que tu README ya tenga todo el challenge completo?
+
